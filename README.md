@@ -212,14 +212,15 @@ but the handler always returns a "not implemented" error. See
 
 ## Adding to Claude Desktop or Claude Code
 
-**Claude Desktop** (`claude_desktop_config.json`), using the built output:
+**Claude Desktop** (`claude_desktop_config.json`), using the built output.
+Replace `/absolute/path/to/preflight-mcp` with wherever you cloned this repo:
 
 ```json
 {
   "mcpServers": {
     "preflight": {
       "command": "node",
-      "args": ["/Users/eddiehale/Documents/Dev_Projects/preflight-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/preflight-mcp/dist/index.js"]
     }
   }
 }
@@ -233,7 +234,7 @@ but the handler always returns a "not implemented" error. See
   "mcpServers": {
     "preflight": {
       "command": "npx",
-      "args": ["tsx", "/Users/eddiehale/Documents/Dev_Projects/preflight-mcp/src/index.ts"]
+      "args": ["tsx", "/absolute/path/to/preflight-mcp/src/index.ts"]
     }
   }
 }
