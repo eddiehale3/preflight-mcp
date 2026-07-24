@@ -226,8 +226,28 @@ Replace `/absolute/path/to/preflight-mcp` with wherever you cloned this repo:
 }
 ```
 
-**Claude Code** (`.mcp.json`), dev-mode via `tsx` directly against source
-(no build step, faster iteration):
+**Claude Code** — use the `claude mcp add` CLI rather than editing config by
+hand. Dev-mode via `tsx` directly against source (no build step, faster
+iteration):
+
+```bash
+claude mcp add --scope user preflight -- npx tsx /absolute/path/to/preflight-mcp/src/index.ts
+```
+
+Or against the built output:
+
+```bash
+claude mcp add --scope user preflight -- node /absolute/path/to/preflight-mcp/dist/index.js
+```
+
+`--scope user` makes the server available in every project. Use
+`--scope project` instead if you want it scoped to a single project's
+`.mcp.json` (shareable via that project's repo). Verify registration with
+`claude mcp list`, then start a **new** Claude Code session — existing
+sessions won't pick up a newly added server.
+
+Both approaches produce the same underlying `command`/`args` you'd write by
+hand into a `.mcp.json`:
 
 ```json
 {
