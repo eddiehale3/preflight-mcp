@@ -16,7 +16,7 @@ to know before flying.
 | (a) Fuel requirements | `estimate_fuel` | implemented |
 | (a) Alternatives if the flight can't be completed | `find_alternates` | implemented (requires a candidate airport list — see limitations) |
 | (a) Known ATC traffic delays | — | not built; no clean free data source |
-| NOTAMs (part of "all available information") | `get_notams` | stub only — needs FAA API credentials |
+| NOTAMs (part of "all available information") | `get_notams` | implemented, but returns a clear "not configured" error until you supply FAA API credentials — see [Configuring NOTAM credentials](#configuring-notam-credentials) |
 
 ## Setup
 
@@ -184,11 +184,49 @@ against current METAR.
 
 **Requires `candidateAirportIds`** — see [Known limitations](#known-limitations).
 
-### `get_notams` (stub)
+### `get_notams`
 
-Registered with its real intended schema so it appears in the tool list,
-but the handler always returns a "not implemented" error. See
-[Known limitations](#known-limitations).
+Fetches current NOTAMs for a single ICAO airport identifier from the FAA
+NOTAM Search API.
+
+```json
+// input
+{ "airportId": "KJLN" }
+```
+
+```json
+// output
+{
+  "airportId": "KJLN",
+  "totalCount": 1,
+  "notams": [
+    {
+      "number": "A0001/26",
+      "type": "N",
+      "issued": "2026-01-01T00:00:00.000Z",
+      "effectiveStart": "2026-01-01T00:00:00.000Z",
+      "effectiveEnd": "PERM",
+      "text": "RWY 13/31 CLSD",
+      "classification": "DOM"
+    }
+  ]
+}
+```
+
+Without credentials configured, it returns an MCP tool error instead of
+silently omitting NOTAMs from a briefing:
+
+```
+// error text when FAA_NOTAM_CLIENT_ID / FAA_NOTAM_CLIENT_SECRET are unset (isError: true)
+[notams_not_configured] FAA NOTAM API credentials are not configured. Register for the
+NOTAM Search API at https://api.faa.gov, then set FAA_NOTAM_CLIENT_ID and
+FAA_NOTAM_CLIENT_SECRET in this server's environment — see README.md.
+```
+
+See [Configuring NOTAM credentials](#configuring-notam-credentials) and
+[Known limitations](#known-limitations) (the decoded NOTAM shape hasn't
+been verified against a live response, since this account has no
+registered credentials yet).
 
 ## Known limitations
 
@@ -200,15 +238,56 @@ but the handler always returns a "not implemented" error. See
   version could use the FAA NASR airport dataset (there's prior art for
   this in a sibling project, `skyfleet-aviation-data`) to support true
   radius-based discovery.
-- **`get_notams` needs FAA API credentials.** The FAA NOTAM Search API at
-  `api.faa.gov` requires a registered `client_id`/`client_secret`. Register
-  at https://api.faa.gov and wire the credentials into a future
-  implementation of `src/tools/getNotams.ts`.
+- **`get_notams` needs FAA API credentials, which aren't configured by
+  default.** See [Configuring NOTAM credentials](#configuring-notam-credentials).
+  Separately, the decoded NOTAM shape in `src/lib/faaNotamClient.ts` is
+  based on FAA's publicly documented schema but has not been verified
+  against a live response — if fields don't line up once you have real
+  credentials, `decodeNotam()` is the only place that should need
+  adjusting.
 - **`aircraft_performance` is seeded with approximate data**, not your
   exact aircraft's charted POH numbers. Once you've confirmed your
   aircraft's actual performance charts, replace the tables in
   `src/data/c172-performance.ts` — `DEFAULT_AIRCRAFT` in
   `src/data/config.ts` is the intended swap point.
+
+## Configuring NOTAM credentials
+
+`get_notams` reads `FAA_NOTAM_CLIENT_ID` and `FAA_NOTAM_CLIENT_SECRET` from
+the server process's environment — there's no config file or hardcoded
+default. Until both are set, the tool returns a `notams_not_configured`
+error rather than silently skipping NOTAMs.
+
+1. Register for the NOTAM Search API at https://api.faa.gov to get a
+   `client_id`/`client_secret` pair.
+2. Provide them to the server one of these ways:
+   - **Local dev (`npm run dev`)**: copy `.env.example` to `.env`, fill in
+     the two values, and run with `node --env-file=.env` (Node 20.6+) —
+     e.g. `node --env-file=.env node_modules/.bin/tsx src/index.ts` — or
+     export them in your shell before running `npm run dev`. `.env` is
+     gitignored; never commit real credentials.
+   - **Claude Code**, via `claude mcp add`:
+     ```bash
+     claude mcp add --scope user preflight \
+       --env FAA_NOTAM_CLIENT_ID=your-client-id \
+       --env FAA_NOTAM_CLIENT_SECRET=your-client-secret \
+       -- npx tsx /absolute/path/to/preflight-mcp/src/index.ts
+     ```
+   - **Claude Desktop / manual `.mcp.json`**, via the `env` block:
+     ```json
+     {
+       "mcpServers": {
+         "preflight": {
+           "command": "node",
+           "args": ["/absolute/path/to/preflight-mcp/dist/index.js"],
+           "env": {
+             "FAA_NOTAM_CLIENT_ID": "your-client-id",
+             "FAA_NOTAM_CLIENT_SECRET": "your-client-secret"
+           }
+         }
+       }
+     }
+     ```
 
 ## Adding to Claude Desktop or Claude Code
 

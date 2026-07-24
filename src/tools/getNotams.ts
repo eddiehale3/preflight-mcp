@@ -1,22 +1,38 @@
+import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { icaoId } from "../lib/schemas.js";
+import { getFaaNotamCredentials, fetchNotams } from "../lib/faaNotamClient.js";
 import { PreflightError, toToolErrorContent } from "../lib/errors.js";
 
 const inputShape = {
   airportId: icaoId,
 };
+const inputSchema = z.object(inputShape);
+
+export type GetNotamsInput = z.infer<typeof inputSchema>;
+
+export async function handleGetNotams(input: GetNotamsInput) {
+  const credentials = getFaaNotamCredentials();
+  if (!credentials) {
+    throw new PreflightError(
+      "notams_not_configured",
+      "FAA NOTAM API credentials are not configured. Register for the NOTAM Search API at https://api.faa.gov, then set FAA_NOTAM_CLIENT_ID and FAA_NOTAM_CLIENT_SECRET in this server's environment — see README.md.",
+    );
+  }
+
+  const { notams, totalCount } = await fetchNotams(input.airportId, credentials);
+  return { airportId: input.airportId, notams, totalCount };
+}
 
 export function registerGetNotams(server: McpServer): void {
   server.tool(
     "get_notams",
-    "NOT IMPLEMENTED. Would fetch current NOTAMs for an airport, supporting the 14 CFR 91.103 requirement to review all available information. Registered as a stub so briefing tools see NOTAMs as an explicit gap rather than silently never checking. Requires FAA NOTAM Search API credentials (client_id/client_secret from api.faa.gov) — see README for setup once available.",
+    "Fetch current NOTAMs for an airport from the FAA NOTAM Search API, satisfying the 14 CFR 91.103 requirement to review all available information. Requires FAA_NOTAM_CLIENT_ID and FAA_NOTAM_CLIENT_SECRET to be set in this server's environment (register at https://api.faa.gov); returns a clear 'not configured' error if they're unset rather than silently omitting NOTAMs from a briefing.",
     inputShape,
-    async () => {
+    async (input) => {
       try {
-        throw new PreflightError(
-          "not_implemented",
-          "NOTAM data requires FAA API credentials (api.faa.gov client_id/secret), which are not yet configured. See README.md for setup instructions.",
-        );
+        const result = await handleGetNotams(input);
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
         return toToolErrorContent(err);
       }
