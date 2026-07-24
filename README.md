@@ -79,7 +79,7 @@ ICAO airport identifier.
 {
   "airportId": "KXNA",
   "name": "FAYETTEVILLE/SPRINGDALE/ROGERS/NORTHWEST ARKANSAS NTL",
-  "fieldElevationFt": 392,
+  "fieldElevationFt": 1286,
   "lat": 36.2816,
   "lon": -94.3078,
   "runways": [

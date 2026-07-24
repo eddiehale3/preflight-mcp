@@ -49,6 +49,7 @@ export interface RawAirport {
   name: string;
   lat: number;
   lon: number;
+  /** Station elevation as reported by the API — in METERS, despite every other length in this API being feet. */
   elev: number;
   runways: Array<{
     id: string;

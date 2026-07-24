@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { icaoId, decodeSurface } from "../lib/schemas.js";
 import { fetchAirports } from "../lib/awcClient.js";
+import { metersToFeet } from "../lib/units.js";
 import { PreflightError, toToolErrorContent } from "../lib/errors.js";
 
 const inputShape = {
@@ -57,7 +58,7 @@ export async function handleGetAirportInfo(input: GetAirportInfoInput) {
   return {
     airportId: airport.icaoId,
     name: airport.name,
-    fieldElevationFt: airport.elev,
+    fieldElevationFt: Math.round(metersToFeet(airport.elev)),
     lat: airport.lat,
     lon: airport.lon,
     runways,
